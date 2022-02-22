@@ -52,6 +52,10 @@ class Workout {
       months[this.date.getMonth()]
     } ${this.date.getDate()}`;
   }
+
+  click() {
+    console.log(this.type);
+  }
 }
 
 class Running extends Workout {
@@ -122,14 +126,44 @@ class App {
 
     if (!el) return;
 
-    const { coords } = this._workouts.find(({ id }) => id === +el.dataset.id);
+    const workout = this._workouts.find(({ id }) => id === +el.dataset.id);
+    console.log(workout);
+    workout.click();
 
-    this._map.setView(coords, this._mapZoomLevel, {
+    this._map.setView(workout.coords, this._mapZoomLevel, {
       animate: true,
       pan: {
         duration: 1,
       },
     });
+  }
+
+  _getLocalStorage() {
+    const data = localStorage.getItem('workouts');
+    if (data) {
+      this._workouts = JSON.parse(data).map(item => {
+        const { type, coords, distance, duration, cadence, elevation } = item;
+        console.log(item);
+
+        if (type === 'running') {
+          return new Running(coords, distance, duration, cadence);
+        }
+
+        if (type === 'cycling') {
+          return new Cycling(coords, distance, duration, elevation);
+        }
+      });
+
+      this._workouts.forEach(workout => {
+        this._renderWorkout(workout);
+        this._renderWorkoutMarker(workout);
+      });
+    }
+  }
+
+  reset() {
+    localStorage.removeItem('workouts');
+    location.reload();
   }
 
   _loadMap({ coords: { latitude, longitude } }) {
@@ -142,6 +176,8 @@ class App {
     this._map.setView([latitude, longitude], this._mapZoomLevel);
 
     this._map.on('click', this._showForm.bind(this));
+
+    this._getLocalStorage();
   }
 
   _renderWorkoutMarker({ type, coords, description }) {
@@ -296,6 +332,10 @@ class App {
     return { ...input, type: { name: type, isValid: true } };
   }
 
+  _setLocalStorage() {
+    localStorage.setItem('workouts', JSON.stringify(this._workouts));
+  }
+
   _newWorkout(e) {
     e.preventDefault();
     const input = this._getFormInput();
@@ -331,6 +371,8 @@ class App {
 
     this._clearForm();
     this._hideForm();
+
+    this._setLocalStorage();
   }
 }
 
